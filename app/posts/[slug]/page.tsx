@@ -19,6 +19,30 @@ const GET_POST_BY_SLUG = gql`
   }
 `;
 
+type PageProps = {
+  params: {
+    slug: string;
+  };
+};
+
+export async function generateMetadata({ params }: PageProps) {
+  const { slug } = params;
+
+  try {
+    const { post } = await client.request(GET_POST_BY_SLUG, { slug });
+
+    if (!post) return { title: 'Post Not Found' };
+
+    return {
+      title: `${post.title} | NewsKorna`,
+      description: `Read "${post.title}" published on ${new Date(post.publishedAt).toLocaleDateString()}`,
+    };
+  } catch (error) {
+    console.error('Error generating metadata:', error.message);
+    return { title: 'Error' };
+  }
+}
+
 export async function generateStaticParams() {
   try {
     const data = await client.request(gql`
@@ -33,40 +57,19 @@ export async function generateStaticParams() {
       slug: post.slug,
     }));
   } catch (error) {
-    console.error('Error fetching static params:', error);
+    console.error('Error fetching static params:', error.message);
     return [];
   }
 }
 
-// Enable ISR - Revalidate every 60 seconds
-export const revalidate = 60;
-
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const { slug } = params;
-
-  try {
-    const { post } = await client.request(GET_POST_BY_SLUG, { slug });
-
-    if (!post) return { title: 'Post Not Found' };
-
-    return {
-      title: `${post.title} | NewsKorna`,
-      description: `Read "${post.title}" published on ${new Date(post.publishedAt).toLocaleDateString()}`,
-    };
-  } catch (error) {
-    console.error('Error generating metadata:', error);
-    return { title: 'Error' };
-  }
-}
-
-export default async function PostPage({ params }: { params: { slug: string } }) {
+export default async function PostPage({ params }: PageProps) {
   const { slug } = params;
 
   let postData;
   try {
     postData = await client.request(GET_POST_BY_SLUG, { slug });
   } catch (err) {
-    console.error('Error fetching post by slug:', err);
+    console.error('Error fetching post by slug:', err.message);
     return notFound();
   }
 
@@ -94,8 +97,10 @@ export default async function PostPage({ params }: { params: { slug: string } })
       </p>
       <div
         className="prose prose-lg max-w-none text-gray-800"
-        dangerouslySetInnerHTML={{ __html: post.content.html }}
+        dangerouslySetInnerHTML={{ __html: post.content?.html || '' }}
       />
     </div>
   );
 }
+
+export const revalidate = 60;

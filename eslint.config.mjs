@@ -1,22 +1,18 @@
-// .eslintrc.js
-module.exports = {
-  extends: [
-    "next/core-web-vitals",
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended"
-  ],
-  parser: "@typescript-eslint/parser",
-  plugins: ["@typescript-eslint"],
-  rules: {
-    // Customize rules as needed
-    "@typescript-eslint/no-explicit-any": "warn", // Warn about 'any' types
-    "react-hooks/exhaustive-deps": "error", // Good for Next.js apps
-    "no-console": "warn", // Warn about console.log
-    // Add other rules you want to customize
-  },
-  settings: {
-    next: {
-      rootDir: true, // Important for Next.js projects
-    },
-  },
-};
+/* eslint-disable */
+
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+import { FlatCompat } from "@eslint/eslintrc";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+});
+
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+];
+
+export default eslintConfig;

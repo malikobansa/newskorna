@@ -1,4 +1,5 @@
 import { GraphQLClient, gql } from 'graphql-request';
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 
@@ -19,30 +20,14 @@ const GET_POST_BY_SLUG = gql`
   }
 `;
 
-type PageProps = {
+// ✅ This defines the structure of `params` received in page & metadata functions
+interface PageProps {
   params: {
     slug: string;
   };
-};
-
-export async function generateMetadata({ params }: PageProps) {
-  const { slug } = params;
-
-  try {
-    const { post } = await client.request(GET_POST_BY_SLUG, { slug });
-
-    if (!post) return { title: 'Post Not Found' };
-
-    return {
-      title: `${post.title} | NewsKorna`,
-      description: `Read "${post.title}" published on ${new Date(post.publishedAt).toLocaleDateString()}`,
-    };
-  } catch (error) {
-    console.error('Error generating metadata:', error.message);
-    return { title: 'Error' };
-  }
 }
 
+// ✅ Generates static paths for all posts
 export async function generateStaticParams() {
   try {
     const data = await client.request(gql`
@@ -57,11 +42,29 @@ export async function generateStaticParams() {
       slug: post.slug,
     }));
   } catch (error) {
-    console.error('Error fetching static params:', error.message);
+    console.error('Error fetching static params:', error);
     return [];
   }
 }
 
+// ✅ Used for SEO metadata generation
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  try {
+    const { post } = await client.request(GET_POST_BY_SLUG, { slug: params.slug });
+
+    if (!post) return { title: 'Post Not Found' };
+
+    return {
+      title: `${post.title} | NewsKorna`,
+      description: `Read "${post.title}" published on ${new Date(post.publishedAt).toLocaleDateString()}`,
+    };
+  } catch (error) {
+    console.error('Metadata generation error:', error);
+    return { title: 'Error loading post' };
+  }
+}
+
+// ✅ Renders the post page
 export default async function PostPage({ params }: PageProps) {
   const { slug } = params;
 
@@ -69,7 +72,7 @@ export default async function PostPage({ params }: PageProps) {
   try {
     postData = await client.request(GET_POST_BY_SLUG, { slug });
   } catch (err) {
-    console.error('Error fetching post by slug:', err.message);
+    console.error('Error fetching post by slug:', err);
     return notFound();
   }
 
@@ -97,10 +100,11 @@ export default async function PostPage({ params }: PageProps) {
       </p>
       <div
         className="prose prose-lg max-w-none text-gray-800"
-        dangerouslySetInnerHTML={{ __html: post.content?.html || '' }}
+        dangerouslySetInnerHTML={{ __html: post.content.html }}
       />
     </div>
   );
 }
 
+// ✅ Enable ISR
 export const revalidate = 60;

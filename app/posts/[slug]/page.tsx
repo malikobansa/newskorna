@@ -17,17 +17,11 @@ interface Post {
   };
 }
 
-// Option 1: Use Next.js's built-in types
-type Props = {
-  params: { slug: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-};
-
-// Option 2: Or if you prefer your own interface
 interface PageProps {
   params: { slug: string };
 }
 
+// GraphQL query to fetch a post by its slug
 const GET_POST_BY_SLUG = gql`
   query GetPostBySlug($slug: String!) {
     post(where: { slug: $slug }) {
@@ -43,6 +37,7 @@ const GET_POST_BY_SLUG = gql`
   }
 `;
 
+// Generate all the possible slugs for static generation
 export async function generateStaticParams() {
   const data = await client.request<{ posts: { slug: string }[] }>(gql`
     {
@@ -57,8 +52,9 @@ export async function generateStaticParams() {
   }));
 }
 
+// Generate metadata for SEO and social sharing
 export async function generateMetadata(
-  { params }: { params: { slug: string } },
+  { params }: PageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   try {
@@ -89,13 +85,15 @@ export async function generateMetadata(
       },
     };
   } catch (error) {
+    console.error('Metadata fetch error:', error);
     return {
       title: 'Error loading post',
     };
   }
 }
 
-export default async function PostPage({ params }: { params: { slug: string } }) {
+// The actual page component
+export default async function PostPage({ params }: PageProps) {
   try {
     const { post } = await client.request<{ post: Post }>(GET_POST_BY_SLUG, {
       slug: params.slug,
@@ -124,7 +122,8 @@ export default async function PostPage({ params }: { params: { slug: string } })
           <header className="mb-8">
             <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
             <p className="text-sm text-gray-500 mb-6">
-              Published on {new Date(post.publishedAt).toLocaleDateString('en-US', {
+              Published on{' '}
+              {new Date(post.publishedAt).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -140,8 +139,10 @@ export default async function PostPage({ params }: { params: { slug: string } })
       </div>
     );
   } catch (error) {
+    console.error('Post fetch error:', error);
     return notFound();
   }
 }
 
+// Set revalidation interval for ISR (Incremental Static Regeneration)
 export const revalidate = 60;
